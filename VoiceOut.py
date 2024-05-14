@@ -16,9 +16,6 @@ import sys
 import time
 sys.path.append(".")
 
-import pyaudio
-import wave
-
 # Import RTM module
 import RTC
 import OpenRTM_aist
@@ -67,9 +64,14 @@ class VoiceOut(OpenRTM_aist.DataFlowComponentBase):
 
         self._d_InVoice = OpenRTM_aist.instantiateDataType(RTC.TimedOctetSeq)
         """
-        受け取った音声のバイナリファイル(wavファイル)を受け取って再生する
+        音声のバイナリファイル(wavファイル)の配列を受け取る
         """
         self._InVoiceIn = OpenRTM_aist.InPort("InVoice", self._d_InVoice)
+        self._d_ID = OpenRTM_aist.instantiateDataType(RTC.TimedShort)
+        """
+        配列のID(何番目の音声を再生するか)を受け取る
+        """
+        self._IDIn = OpenRTM_aist.InPort("ID", self._d_ID)
 
 
 		
@@ -94,6 +96,7 @@ class VoiceOut(OpenRTM_aist.DataFlowComponentBase):
 		
         # Set InPort buffers
         self.addInPort("InVoice",self._InVoiceIn)
+        self.addInPort("ID",self._IDIn)
 		
         # Set OutPort buffers
 		
@@ -178,29 +181,41 @@ class VoiceOut(OpenRTM_aist.DataFlowComponentBase):
     # @return RTC::ReturnCode_t
     #
     #
+    
     def onExecute(self, ec_id):
-        # InVoiceポートから音声データを取得
-        # InVoiceポートから音声データを取得
-        if self._InVoiceIn.isNew():
-            data = self._InVoiceIn.read()
-            voice_data = data.data
+        import pyaudio
+        import wave
 
-            # バイナリデータをpyaudioで再生
-            p = pyaudio.PyAudio()
-            stream = p.open(format=p.get_format_from_width(2),  # フォーマットを指定
-                            channels=1,                         # モノラル
-                            rate=44100,                         # サンプリングレート
-                            output=True)                       # 出力用ストリームとして開く
+        # IDポートからIDを取得
+        if self._IDIn.isNew():
+            id_data = self._IDIn.read()
+            id_number = id_data.data
 
-            # 音声データを再生
-            stream.write(voice_data)
+            # InVoiceポートから音声ファイルデータを取得
+            if self._InVoiceIn.isNew():
+                voice_data = self._InVoiceIn.read().data
 
-            stream.stop_stream()
-            stream.close()
-            p.terminate()
+                # IDに対応する音声ファイルのインデックスを取得
+                file_index = id_number - 1  # IDは1から始まるが、インデックスは0から始まるため
+
+                # 取得したインデックスの音声データを再生
+                if 0 <= file_index < len(voice_data):
+                    # バイナリデータをpyaudioで再生
+                    p = pyaudio.PyAudio()
+                    stream = p.open(format=p.get_format_from_width(2),  # フォーマットを指定
+                                    channels=1,                         # モノラル
+                                    rate=44100,                         # サンプリングレート
+                                    output=True)                        # 出力用ストリームとして開く
+
+                    # 音声データを再生
+                    stream.write(voice_data[file_index])
+
+                    stream.stop_stream()
+                    stream.close()
+                    p.terminate()
 
         return RTC.RTC_OK
-
+       
 	
     ###
     ##
