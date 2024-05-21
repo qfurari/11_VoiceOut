@@ -191,28 +191,30 @@ class VoiceOut(OpenRTM_aist.DataFlowComponentBase):
             id_data = self._IDIn.read()
             id_number = id_data.data
 
-            # InVoiceポートから音声ファイルデータを取得
-            if self._InVoiceIn.isNew():
+            # InVoiceポートから音声ファイルデータを一つずつ受け取り、リストに追加
+            voice_data_list = []
+            while self._InVoiceIn.isNew():
                 voice_data = self._InVoiceIn.read().data
+                voice_data_list.append(voice_data)
 
-                # IDに対応する音声ファイルのインデックスを取得
-                file_index = id_number - 1  # IDは1から始まるが、インデックスは0から始まるため
+            # IDに対応する音声ファイルのインデックスを取得
+            file_index = id_number - 1  # IDは1から始まるが、インデックスは0から始まるため
 
-                # 取得したインデックスの音声データを再生
-                if 0 <= file_index < len(voice_data):
-                    # バイナリデータをpyaudioで再生
-                    p = pyaudio.PyAudio()
-                    stream = p.open(format=p.get_format_from_width(2),  # フォーマットを指定
-                                    channels=1,                         # モノラル
-                                    rate=44100,                         # サンプリングレート
-                                    output=True)                        # 出力用ストリームとして開く
+            # 取得したインデックスの音声データを再生
+            if 0 <= file_index < len(voice_data_list):
+                # バイナリデータをpyaudioで再生
+                p = pyaudio.PyAudio()
+                stream = p.open(format=p.get_format_from_width(2),  # フォーマットを指定
+                                channels=1,                         # モノラル
+                                rate=44100,                         # サンプリングレート
+                                output=True)                        # 出力用ストリームとして開く
 
-                    # 音声データを再生
-                    stream.write(voice_data[file_index])
+                # 音声データを再生
+                stream.write(voice_data_list[file_index])  # 指定したインデックスの音声データを再生
 
-                    stream.stop_stream()
-                    stream.close()
-                    p.terminate()
+                stream.stop_stream()
+                stream.close()
+                p.terminate()
 
         return RTC.RTC_OK
        
