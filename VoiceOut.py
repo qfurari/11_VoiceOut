@@ -105,6 +105,7 @@ class VoiceOut(OpenRTM_aist.DataFlowComponentBase):
         # Set service consumers to Ports
 		
         # Set CORBA Service Ports
+        self.voice_data_list = []  # 音声データリストをクラス変数として定義
 		
         return RTC.RTC_OK
 	
@@ -185,6 +186,19 @@ class VoiceOut(OpenRTM_aist.DataFlowComponentBase):
     def onExecute(self, ec_id):
         import pyaudio
         import wave
+        
+        
+        if self._InVoiceIn.isNew():
+            self.voice_data_list.clear()
+
+            while self._InVoiceIn.isNew():
+                time.sleep(0.005)
+                voice_data = self._InVoiceIn.read().data
+                self.voice_data_list.append(voice_data)
+                
+            print(f"Received {len(self.voice_data_list)} audio files.")  # 音声ファイルのリストの長さを表示
+
+
 
         # IDポートからIDを取得
         if self._IDIn.isNew():
@@ -192,16 +206,16 @@ class VoiceOut(OpenRTM_aist.DataFlowComponentBase):
             id_number = id_data.data
 
             # InVoiceポートから音声ファイルデータを一つずつ受け取り、リストに追加
-            voice_data_list = []
-            while self._InVoiceIn.isNew():
-                voice_data = self._InVoiceIn.read().data
-                voice_data_list.append(voice_data)
+            #voice_data_list = []
+            #while self._InVoiceIn.isNew():
+                #voice_data = self._InVoiceIn.read().data
+                #voice_data_list.append(voice_data)
 
             # IDに対応する音声ファイルのインデックスを取得
             file_index = id_number - 1  # IDは1から始まるが、インデックスは0から始まるため
 
             # 取得したインデックスの音声データを再生
-            if 0 <= file_index < len(voice_data_list):
+            if 0 <= file_index < len(self.voice_data_list):
                 # バイナリデータをpyaudioで再生
                 p = pyaudio.PyAudio()
                 stream = p.open(format=p.get_format_from_width(2),  # フォーマットを指定
@@ -210,7 +224,7 @@ class VoiceOut(OpenRTM_aist.DataFlowComponentBase):
                                 output=True)                        # 出力用ストリームとして開く
 
                 # 音声データを再生
-                stream.write(voice_data_list[file_index])  # 指定したインデックスの音声データを再生
+                stream.write(self.voice_data_list[file_index])  # 指定したインデックスの音声データを再生
 
                 stream.stop_stream()
                 stream.close()
