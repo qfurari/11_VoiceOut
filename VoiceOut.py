@@ -212,7 +212,7 @@ class VoiceOut(OpenRTM_aist.DataFlowComponentBase):
                 #voice_data_list.append(voice_data)
 
             # IDに対応する音声ファイルのインデックスを取得
-            file_index = id_number - 1  # IDは1から始まるが、インデックスは0から始まるため
+            file_index = id_number  # ×IDは1から始まるが、インデックスは0から始まるため
 
             # 取得したインデックスの音声データを再生
             if 0 <= file_index < len(self.voice_data_list):
